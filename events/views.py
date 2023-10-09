@@ -1,11 +1,14 @@
+import datetime
 from datetime import date
+from logging import Logger
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from .models import RSVP, Event
-from .serializers import EventSerializer
+from .serializers import EventSerializer, EventDashBoard
 from django.contrib.auth import get_user_model
+
 User = get_user_model()
 
 
@@ -17,6 +20,7 @@ class EventCreateAPIView(APIView):
         if serializer.is_valid():
             serializer.save(organizer=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -32,24 +36,37 @@ class EventListAPIView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        events = Event.objects.filter(date__gte=date.today())
+        events = Event.objects.filter(date__gte=date.today()).order_by('date')
         serializer = EventSerializer(events, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class EventListsAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        events = Event.objects.filter(date__gte=date.today()).order_by()
+        serializer = EventSerializer(events, many=True)
+        Logger.info(serializer.error_messages)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class EventUpdateAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def put(self, request, slug):
+    def patch(self, request, slug):
         event = get_object_or_404(Event, slug=slug)
 
         if event.organizer != request.user:
-            return Response({"detail": "You don't have permission to update this event."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You don't have permission to update this event."},
+                            status=status.HTTP_403_FORBIDDEN)
 
-        serializer = EventSerializer(event, data=request.data)
+        serializer = EventSerializer(event, data=request.data, partial=True)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -60,7 +77,8 @@ class EventDeleteAPIView(APIView):
         event = get_object_or_404(Event, slug=slug)
 
         if event.organizer != request.user:
-            return Response({"detail": "You don't have permission to delete this event."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You don't have permission to delete this event."},
+                            status=status.HTTP_403_FORBIDDEN)
 
         event.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -116,11 +134,12 @@ class SendInvitationAPIView(APIView):
         event = get_object_or_404(Event, slug=slug)
 
         if event.organizer != request.user:
-            return Response({"detail": "You don't have permission to send invitations for this event."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You don't have permission to send invitations for this event."},
+                            status=status.HTTP_403_FORBIDDEN)
 
         invited_user = get_object_or_404(User, username=username)
 
-        if event.invited_users.filter(id=invited_user.id).exists():
+        if event.invited_users.filter(username=invited_user.username).exists():
             return Response({"detail": "Invitation already sent to this user."}, status=status.HTTP_400_BAD_REQUEST)
 
         event.invited_users.add(invited_user)
@@ -133,18 +152,29 @@ class OrganizerDashboardAPIView(APIView):
 
     def get(self, request):
         organizer = request.user
-        events_created = Event.objects.filter(organizer=organizer)
-        serializer = EventSerializer(events_created, many=True)
+        events = Event.objects.filter(organizer=organizer).all()
+        serializer = EventDashBoard(events, many=True).data
 
-        events_attendees = {}
+        return Response(serializer, status=status.HTTP_200_OK)
 
-        for event in events_created:
-            events_attendees[event.pk] = event.rsvps.filter(
-                is_attending=True).count()
 
-        data = {
-            "events_created": serializer.data,
-            "event_attendees": events_attendees,
-        }
+class EventRegistration(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-        return Response(data, status=status.HTTP_200_OK)
+    def patch(self, request, slug, fomart=None):
+        username = request.data.get('username')
+
+        event = get_object_or_404(Event, slug=slug)
+
+        registered_users = event.registered_users.all()
+
+        user = get_object_or_404(User, username=username)
+
+        if user in registered_users:
+            return Response({'detail': 'You\'ve already registered for this event'})
+
+        event.registered_users.add(user)
+
+        return Response({'success': 'You\'ve successfully registered for this event'})
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

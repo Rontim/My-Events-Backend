@@ -1,13 +1,13 @@
-from django.urls import path, register_converter
+from django.urls import path
 from .views import *
-from .converters import SlugPrimaryKeyConverter
 
-register_converter(SlugPrimaryKeyConverter, 'slug')
 
 urlpatterns = [
     path('', EventListAPIView.as_view()),
     path('create/', EventCreateAPIView.as_view(), name='event_create'),
     path('<str:slug>/', EventDetailView.as_view(), name='event_detail'),
+    path('<str:slug>/register/', EventRegistration.as_view(),
+         name='event_registration'),
     path('<str:slug>/update/',
          EventUpdateAPIView.as_view(), name='event-update'),
     path('<str:slug>/delete/',
@@ -20,4 +20,5 @@ urlpatterns = [
          SendInvitationAPIView.as_view(), name='send-invite'),
     path('organizer/dashboard/', OrganizerDashboardAPIView.as_view(),
          name='organizer-dashboard'),
+
 ]

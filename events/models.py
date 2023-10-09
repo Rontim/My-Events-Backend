@@ -25,6 +25,10 @@ class Event(models.Model):
         User, through='RSVP', related_name='rsvp_events', blank=True)
     attendees = models.ManyToManyField(
         User, related_name='attended_events', blank=True)
+    ticket_price = models.DecimalField(
+        decimal_places=2, default=0.00, max_digits=10)
+
+    _cached_fields = {}
 
     def save(self, *args, **kwargs):
         if self.date < timezone.now().date():
@@ -37,12 +41,16 @@ class Event(models.Model):
             raise ValidationError("Event date cannot be in the past.")
 
     @property
-    def is_full(self):
+    def is_full(self) -> bool:
         return self.registered_users.count() <= self.max_capacity
 
     @property
-    def is_registered(self, user):
+    def is_registered(self, user) -> bool:
         return self.registered_users.filter(email=user.email).exists()
+
+    @property
+    def total_revenue(self):
+        return float(self.ticket_price * self.attendees.count())
 
     def __str__(self) -> str:
         return f"{self.title} at {self.location} on {self.date}: {self.time}"
