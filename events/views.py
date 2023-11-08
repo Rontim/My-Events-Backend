@@ -16,12 +16,29 @@ class EventCreateAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, format=None):
-        serializer = EventSerializer(data=request.data)
+        data = request.data
+        event = {}
+        images = data.get('images', None)
+        if images:
+            if len(images) > 1:
+                for i in range(len(images)):
+                    event[f'event_image{i + 1}'] = images[i]
+            else:
+                event['event_image1'] = images[0]
+        event['title'] = data.get('title', None)
+        event['description'] = data.get('description', None)
+        event['date'] = data.get('date', None)
+        event['time'] = data.get('time', None)
+        event['location'] = data.get('location', None)
+        event['category'] = data.get('category', None)
+        event['max_capacity'] = data.get('max_capacity', None)
+        event['ticket_price'] = data.get('ticket_price', None)
+        event['organizer'] = request.user.id
+        serializer = EventSerializer(data=event)
         if serializer.is_valid():
-            serializer.save(organizer=request.user)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print(serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Invalid data"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EventDetailView(APIView):

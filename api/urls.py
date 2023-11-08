@@ -1,5 +1,9 @@
-from django.urls import path
+"""
+URLs for the API app.
+"""
+
+from django.urls import path, include
 
 urlpatterns = [
-    path(''),
+    path('events/', include('api.events.urls')),
 ]
