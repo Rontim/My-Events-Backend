@@ -8,7 +8,7 @@ class EventSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class EventDashBoard(serializers.ModelSerializer):
+class DashBoardSerializer(serializers.ModelSerializer):
     registered = serializers.SerializerMethodField()
     invited = serializers.SerializerMethodField()
     attendees = serializers.SerializerMethodField()

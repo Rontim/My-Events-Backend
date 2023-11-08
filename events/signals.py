@@ -5,7 +5,6 @@ from notification.models import Notification
 from django.contrib.auth import get_user_model
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from django.utils import timesince
 
 User = get_user_model()
 
