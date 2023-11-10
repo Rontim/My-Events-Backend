@@ -13,21 +13,29 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from datetime import timedelta
 import os
 from pathlib import Path
+import dotenv
+from django.core.management.utils import get_random_secret_key
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+dotenv_file = BASE_DIR / '.env.local'
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+if dotenv_file.is_file():
+    dotenv.load_dotenv(dotenv_file)
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-bofe#=*mr_w_kru9gf0cedds=_dzj^9w66o1z&o-r9w_suj)_+'
+DEVELOPMENT_MODE = os.getenv('DEVELOPMENT_MODE', 'False') == 'True'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', get_random_secret_key())
+
+
+DEBUG = os.getenv('DEBUG', 'False') == 'True'   # DEVELOPMENT_MODE
+
 
 ALLOWED_HOSTS = ['*']
+
+DOMAIN = os.getenv('DOMAIN', 'localhost:8000')
+SITE_NAME = 'My Events'
 
 
 # Application definition
@@ -98,17 +106,25 @@ ASGI_APPLICATION = 'config.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'events',
-        'USER': 'root',
-        'PASSWORD': 'password123',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.getenv('DATABASE_NAME', 'django'),
+        'USER': os.getenv('DATABASE_USER', 'django'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD', 'django'),
+        'HOST': os.getenv('DATABASE_HOST', 'localhost'),
+        'PORT': os.getenv('DATABASE_PORT', '3306')
     }
 }
 
+
+COOKIE_NAME = 'access'
+COOKIE_MAX_AGE = 60 * 60 * 24
+COOKIE_SECURE = os.getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
+COOKIE_HTTP_ONLY = True
+COOKIE_PATH = '/'
+COOKIE_SAMESITE = 'None'
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'user.authentication.CustomJWTAuthentication',
     )
 }
 
